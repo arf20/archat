@@ -78,11 +78,10 @@ create_sockets()
 }
 
 int
-recv_message(const header_t **header, const char **data)
+recv_message(const header_t **header, const char **data, struct sockaddr_in *addr)
 {
-    struct sockaddr_in addr;
     int addrlen = sizeof(addr);
-    int r = recvfrom(fd, buff, 2048, 0, (struct sockaddr*)&addr, &addrlen);
+    int r = recvfrom(fd, buff, 2048, 0, (struct sockaddr*)addr, &addrlen);
 
     *header = (header_t*)buff;
     *data = buff + sizeof(header_t);
@@ -104,7 +103,7 @@ send_ping(uint32_t uid)
 
 int
 send_pong(uint32_t uid, int16_t rid, const char *nick,
-    const char *rname)
+    const char *hname, const char *rname)
 {
     header_t *header = (header_t*)buff;
     header->_magic = MAGIC;
@@ -121,6 +120,9 @@ send_pong(uint32_t uid, int16_t rid, const char *nick,
 
     strcpy(data + datalen, nick);
     datalen += strlen(nick) + 1;
+
+    strcpy(data + datalen, hname);
+    datalen += strlen(hname) + 1;
 
     if (rname != NULL) {
         strcpy(data + datalen, rname);
@@ -160,5 +162,22 @@ send_join(uint32_t uid, uint16_t rid, const char *rname)
 int
 send_rmsg(uint32_t uid, uint16_t rid, const char *msg)
 {
+    header_t *header = (header_t*)buff;
+    header->_magic = MAGIC;
+    header->type = TYPE_RMSG;
+    header->s_uid = uid;
 
+    char *data = buff + sizeof(header_t);
+    int datalen = 0;
+    
+    *(uint16_t*)data = rid;
+    datalen += 2;
+
+    datalen += 2; /* padd? */
+
+    strcpy(data + datalen, msg);
+    datalen += strlen(msg) + 1;
+
+    return sendto(fd, buff, sizeof(header_t) + datalen, 0,
+        (struct sockaddr*)&dest_addr, sizeof(struct sockaddr));
 }

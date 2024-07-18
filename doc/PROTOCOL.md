@@ -36,13 +36,17 @@ Discovers users and rooms. Provides uid, rid, nickname and room name.
 Data:
 ```
 +---------------+---------------+
-| RID           |               |
+| RID           | reserved      |
 +---------------+---------------+
 | Nickname NUL-terminated       |
 | ...                           |
 +-------------------------------+
+| Hostname                      |
+| ...                           |
++-------------------------------+
 | Room name NUL-terminated      |
 | ...                           |
++-------------------------------+
 ```
 
 ### JOIN 0x03

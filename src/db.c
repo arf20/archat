@@ -24,12 +24,14 @@
 #include <string.h>
 
 void
-user_list_push(user_node_t *l, uint32_t uid, const char *nick, uint16_t rid)
+user_list_push(user_node_t *l, uint32_t uid, const char *nick, uint16_t rid,
+    struct sockaddr_in addr)
 {
     for (user_node_t *i = l->next; i != NULL; i = i->next)
         if (i->uid == uid) {
             i->nick = nick;
             i->rid = rid;
+            i->addr = addr;
             return;
         }
     
@@ -42,7 +44,34 @@ user_list_push(user_node_t *l, uint32_t uid, const char *nick, uint16_t rid)
     i->next->uid = uid;
     i->next->nick = nick;
     i->next->rid = rid;
+    i->next->addr = addr;
     i->next->next = NULL;
+}
+
+void
+user_list_set_rid(user_node_t *l, uint32_t uid, uint16_t rid)
+{
+    for (user_node_t *i = l->next; i != NULL; i = i->next)
+        if (i->uid == uid) {
+            i->rid = rid;
+            return;
+        }
+}
+
+const char *
+user_list_get_nick(user_node_t *l, uint32_t uid)
+{
+    for (user_node_t *i = l->next; i != NULL; i = i->next)
+        if (i->uid == uid)
+            return i->nick;
+}
+
+uint16_t
+user_list_get_rid(user_node_t *l, uint32_t uid)
+{
+    for (user_node_t *i = l->next; i != NULL; i = i->next)
+        if (i->uid == uid)
+            return i->rid;
 }
 
 void

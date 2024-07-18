@@ -21,6 +21,8 @@
 
 #include <stdint.h>
 
+#include <arpa/inet.h>
+
 #define PORT    42069
 #define GROUP   "239.255.42.69"
 
@@ -43,9 +45,10 @@ typedef struct {
 } header_t;
 
 int create_sockets();
-int recv_message();
+int recv_message(const header_t **header, const char **data, struct sockaddr_in *addr);
 int send_ping(uint32_t uid);
-int send_pong(uint32_t uid, int16_t rid, const char *nick, const char *rname);
+int send_pong(uint32_t uid, int16_t rid, const char *nick, const char *hname,
+    const char *rname);
 int send_join(uint32_t uid, uint16_t rid, const char *rname);
 int send_rmsg(uint32_t uid, uint16_t rid, const char *msg);
 

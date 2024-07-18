@@ -28,27 +28,36 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <unistd.h>
 
 #include "net.h"
 #include "db.h"
 
 
-char *
-prompt_input()
+struct termios saved_tattr = { };
+
+void
+prompt_input(char *buff, size_t n)
 {
-    int c;
-    while (getchar() != '\n');
-    fcntl(0, F_SETFL, fcntl(0, F_GETFL) & ~O_NONBLOCK);
-    char *buff = NULL;
-    size_t len = 0;
-    int r = getline(&buff, &len, stdin);
-    buff[strlen(buff) - 1] = '\0';
-    fcntl(0, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK);
-    return buff;
+    char c;
+    int i = 0;
+    while ((c = getchar()) != '\n' && i < n - 2) {
+        if (c == -1) continue;
+        if (c == 127) {
+            i--;
+            printf("\b \b");
+            continue;
+        }
+        putchar(c);
+        buff[i] = c;
+        i++;
+    }
+    buff[i] = '\0';
+    putchar('\n');
 }
 
 int
-main()
+main(int argc, char **argv)
 {
     printf("arfchat  Copyright (C) 2024  Angel Ruiz Fernandez <arf20>\n"
         "This program comes with ABSOLUTELY NO WARRANTY\n"
@@ -56,6 +65,15 @@ main()
         "under certain conditions.\n\n");
 
     srand(time(NULL));
+
+    int debug = 0;
+    for (int i = 1; i < argc; i++)
+        if (strcmp(argv[i], "-d") == 0)
+            debug = 1;
+
+    /* Enviroment information */
+    char hname[1024];
+    gethostname(hname, 1024);
 
     /* User information */
     uint32_t uid = rand();
@@ -79,7 +97,8 @@ main()
 
     if (strlen(nickbuff) > 0) nick = nickbuff;
 
-    printf("==uid: %d\n==nick: %s\n", uid, nick);
+    if (debug)
+        printf("==uid: %d\n==nick: %s\n", uid, nick);
 
     /* Init */
     if (create_sockets() < 0) {
@@ -88,7 +107,8 @@ main()
     }
 
     /* Begin autodiscovery process */
-    printf(">>PING %d\n", uid);
+    if (debug)
+        printf(">>PING %d\n", uid);
     if (send_ping(uid) < 0) {
         printf("send_ping: %s\n", strerror(errno));
         return 1;
@@ -97,7 +117,7 @@ main()
     time_t t_begin = time(NULL);
 
     /* Non-canonical console */
-    struct termios tattr = { }, saved_tattr = { };
+    struct termios tattr = { };
     tcgetattr(STDIN_FILENO, &tattr);
     saved_tattr = tattr;
     tattr.c_lflag &= ~(ICANON|ECHO);
@@ -110,10 +130,12 @@ main()
     fcntl(0, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK);
 
     int run = 1;
+    const header_t *header;
+    const char *data;
+    struct sockaddr_in s_addr;
     while (run) {
-        const header_t *header;
-        const char *data;
-        if (recv_message(&header, &data) < 0) {
+        
+        if (recv_message(&header, &data, &s_addr) < 0) {
             if (errno != EAGAIN) {
                 printf("recv_message: %s\n", strerror(errno));
                 break;
@@ -122,33 +144,67 @@ main()
             /* Handle incoming packets */
             switch (header->type) {
                 case TYPE_PING: {
-                    printf("<<PING %d\n", header->s_uid);
-
-                    printf(">>PONG %d %d %s %s\n", uid, rid, nick, rname);
-                    send_pong(uid, rid, nick, rname);
+                    if (debug) {
+                        printf("<<PING %d\n", header->s_uid);
+                        printf(">>PONG %d %d %s %s\n", uid, rid, nick, rname);
+                    }
+                    
+                    send_pong(uid, rid, nick, hname, rname);
                 } break;
                 case TYPE_PONG: {
-                    printf("<<PONG %d ", header->s_uid);
+                    if (debug)
+                        printf("<<PONG %d ", header->s_uid);
 
                     uint16_t s_rid = *(uint16_t*)data;
                     const char *s_nick = data + 4;
                     const char *s_rname = data + 4 + strlen(s_nick) + 1;
 
-                    printf("%d %s %s\n", s_rid, s_nick, s_rname);
+                    if (debug)
+                        printf("%d %s %s\n", s_rid, s_nick, s_rname);
 
-                    user_list_push(user_list, header->s_uid, strdup(s_nick), s_rid);
+                    user_list_push(user_list, header->s_uid, strdup(s_nick),
+                        s_rid, s_addr);
                     if (s_rid != 0)
                         room_list_push(room_list, s_rid, strdup(s_rname));
                 } break;
                 case TYPE_JOIN: {
-                    printf("<<JOIN %d ", header->s_uid);
+                    if (debug)
+                        printf("<<JOIN %d ", header->s_uid);
 
                     uint16_t s_rid = *(uint16_t*)data;
                     const char *s_rname = data + 4;
 
-                    printf("%d %s\n", s_rid, s_rname);
+                    if (debug)
+                        printf("%d %s\n", s_rid, s_rname);
 
+                    uint16_t prev_rid = user_list_get_rid(user_list,+
+                        header->s_uid);
+                    
+                    if ((prev_rid == rid) && (prev_rid != s_rid))
+                        printf("%s has left %s\n", user_list_get_nick(user_list,
+                            header->s_uid), rname);
+
+                    user_list_set_rid(user_list, header->s_uid, s_rid);
                     room_list_push(room_list, s_rid, s_rname);
+
+                    if ((s_rid == rid) && (header->s_uid != uid))
+                        printf("%s has joined %s\n", user_list_get_nick(user_list,
+                            header->s_uid), rname);
+                } break;
+                case TYPE_RMSG: {
+                    if (debug)
+                        printf("<<RMSG %d ", header->s_uid);
+
+                    uint16_t s_rid = *(uint16_t*)data;
+                    const char *s_msg = data + 4;
+
+                    if (debug)
+                        printf("%d %s\n", s_rid, s_msg);
+
+                    if ((s_rid == rid) && (header->s_uid != uid))
+                        printf("[%s] %s\n",
+                            user_list_get_nick(user_list, header->s_uid),
+                            s_msg);
                 } break;
             }
         }
@@ -163,12 +219,27 @@ main()
         } else  {
             switch (cmd) {
                 case 'q': {
+                    if (debug)
+                        printf(">>JOIN %d %d %s\n", uid, 0, "");
+                    send_join(uid, 0, "");
                     run = 0;
-                };
-                case 'w': {
+                }; break;
+                case 'n': {
+                    printf("\n user name              from\n");
+                    printf(   "-----------------------------\n");
                     for (user_node_t *i = user_list->next; i != NULL; i = i->next)
-                        printf("%s ", i->nick);
-                    puts("\n");
+                        printf("%10s   %15s\n", i->nick, inet_ntoa(i->addr.sin_addr));
+                    puts(     "-----------------------------\n\n");
+                } break;
+                case 'w': {
+                    int c = 0;
+                    for (user_node_t *i = user_list->next; i != NULL; i = i->next)
+                        if (i->rid == rid) c++;
+                    printf("\n[you are in '%s' among %d]\n\n", rname, c);
+
+                    for (user_node_t *i = user_list->next; i != NULL; i = i->next)
+                        if (i->rid == rid) printf("%s ", i->nick);
+                    puts("\n\n");
                 } break;
                 case 'l': {
                     int maxw = 0;
@@ -177,15 +248,20 @@ main()
                         if (w > maxw) maxw = w;
                     }
 
-                    printf(" room name   #\n");
+                    printf("\n room name   #\n");
                     printf("---------------\n");
-                    for (room_node_t *i = room_list->next; i != NULL; i = i->next)
-                        printf("%10s %3d\n", i->rname, i->rid);
-                    printf("---------------\n");
+                    for (room_node_t *i = room_list->next; i != NULL; i = i->next) {
+                        int c = 0;
+                        for (user_node_t *j = user_list->next; j != NULL; j = j->next)
+                            if (i->rid == j->rid) c++;
+                        printf("%10s %3d\n", i->rname, c);
+                    }
+                    printf("---------------\n\n");
                 } break;
                 case 'j': {
                     printf(":join> ");
-                    char *joinrname = prompt_input();
+                    char joinrname[256];
+                    prompt_input(joinrname, 256);
 
                     room_node_t *found = NULL;
                     for (room_node_t *i = room_list->next; i != NULL; i = i->next) {
@@ -197,22 +273,37 @@ main()
 
                     if (found) {
                         /* Join room */
-                        printf(">>JOIN %d %d %s\n", uid, found->rid, found->rname);
+                        if (debug)
+                            printf(">>JOIN %d %d %s\n", uid, found->rid, found->rname);
                         send_join(uid, found->rid, found->rname);
 
                         rid = found->rid;
-                        rname = found->rname;
+                        rname = strdup(found->rname);
                     } else {
                         /* Create room */
                         uint16_t new_rid = 1 + (rand() % 65534);
 
-                        printf(">>JOIN* %d %d %s\n", uid, new_rid, joinrname);
+                        if (debug)
+                            printf(">>JOIN* %d %d %s\n", uid, new_rid, joinrname);
                         send_join(uid, new_rid, joinrname);
 
                         rid = new_rid;
-                        rname = joinrname;
+                        rname = strdup(joinrname);
+
+                        if (debug)
+                            printf("==rid: %d\n==rname: %s\n", rid, rname);
                     }
-                }
+                } break;
+                case ' ': {
+                    printf("[%s] ", nick);
+                    char msg[1024];
+                    prompt_input(msg, 1024);
+
+                    if (debug)
+                        printf(">>RMSG %d %d %s\n", uid, rid, msg);
+                    send_rmsg(uid, rid, msg);
+
+                } break;
             }
         }
 
