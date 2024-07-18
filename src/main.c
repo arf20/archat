@@ -27,9 +27,25 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <termios.h>
 
 #include "net.h"
 #include "db.h"
+
+
+char *
+prompt_input()
+{
+    int c;
+    while (getchar() != '\n');
+    fcntl(0, F_SETFL, fcntl(0, F_GETFL) & ~O_NONBLOCK);
+    char *buff = NULL;
+    size_t len = 0;
+    int r = getline(&buff, &len, stdin);
+    buff[strlen(buff) - 1] = '\0';
+    fcntl(0, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK);
+    return buff;
+}
 
 int
 main()
@@ -49,7 +65,7 @@ main()
 
     /* Room information */
     uint16_t rid = 0;
-    char *rname = NULL;
+    const char *rname = NULL;
 
     /* DB */
     user_node_t *user_list = malloc(sizeof(user_node_t));
@@ -63,6 +79,8 @@ main()
 
     if (strlen(nickbuff) > 0) nick = nickbuff;
 
+    printf("==uid: %d\n==nick: %s\n", uid, nick);
+
     /* Init */
     if (create_sockets() < 0) {
         printf("create_sockets: %s\n", strerror(errno));
@@ -70,7 +88,7 @@ main()
     }
 
     /* Begin autodiscovery process */
-    printf("Autodiscovery...\n");
+    printf(">>PING %d\n", uid);
     if (send_ping(uid) < 0) {
         printf("send_ping: %s\n", strerror(errno));
         return 1;
@@ -78,9 +96,21 @@ main()
 
     time_t t_begin = time(NULL);
 
+    /* Non-canonical console */
+    struct termios tattr = { }, saved_tattr = { };
+    tcgetattr(STDIN_FILENO, &tattr);
+    saved_tattr = tattr;
+    tattr.c_lflag &= ~(ICANON|ECHO);
+    tattr.c_oflag |= ONLCR;
+    tattr.c_cc[VMIN] = 1;
+    tattr.c_cc[VTIME] = 0;
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &tattr);
+
+    /* Non-blocking console */
     fcntl(0, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK);
 
-    while (1) {
+    int run = 1;
+    while (run) {
         const header_t *header;
         const char *data;
         if (recv_message(&header, &data) < 0) {
@@ -89,11 +119,10 @@ main()
                 break;
             }
         } else {
-            //printf("<<TYPE: %d\n", header->type);
-
+            /* Handle incoming packets */
             switch (header->type) {
                 case TYPE_PING: {
-                    printf("<<PING\n");
+                    printf("<<PING %d\n", header->s_uid);
 
                     printf(">>PONG %d %d %s %s\n", uid, rid, nick, rname);
                     send_pong(uid, rid, nick, rname);
@@ -108,11 +137,23 @@ main()
                     printf("%d %s %s\n", s_rid, s_nick, s_rname);
 
                     user_list_push(user_list, header->s_uid, strdup(s_nick), s_rid);
-                    room_list_push(room_list, s_rid, strdup(s_rname));
-                }
+                    if (s_rid != 0)
+                        room_list_push(room_list, s_rid, strdup(s_rname));
+                } break;
+                case TYPE_JOIN: {
+                    printf("<<JOIN %d ", header->s_uid);
+
+                    uint16_t s_rid = *(uint16_t*)data;
+                    const char *s_rname = data + 4;
+
+                    printf("%d %s\n", s_rid, s_rname);
+
+                    room_list_push(room_list, s_rid, s_rname);
+                } break;
             }
         }
 
+        /* Handle commands */
         char cmd;
         if (read(0, &cmd, 1) < 0) {
             if (errno != EAGAIN) {
@@ -121,23 +162,64 @@ main()
             }
         } else  {
             switch (cmd) {
+                case 'q': {
+                    run = 0;
+                };
                 case 'w': {
                     for (user_node_t *i = user_list->next; i != NULL; i = i->next)
                         printf("%s ", i->nick);
                     puts("\n");
                 } break;
                 case 'l': {
-                    printf(" room name    #\n");
-                    printf("-------------------------------\n");
+                    int maxw = 0;
+                    for (room_node_t *i = room_list->next; i != NULL; i = i->next) {
+                        int w = strlen(i->rname);
+                        if (w > maxw) maxw = w;
+                    }
+
+                    printf(" room name   #\n");
+                    printf("---------------\n");
                     for (room_node_t *i = room_list->next; i != NULL; i = i->next)
-                        printf("%s %d\n", i->rid);
-                    printf("-------------------------------\n");
+                        printf("%10s %3d\n", i->rname, i->rid);
+                    printf("---------------\n");
                 } break;
+                case 'j': {
+                    printf(":join> ");
+                    char *joinrname = prompt_input();
+
+                    room_node_t *found = NULL;
+                    for (room_node_t *i = room_list->next; i != NULL; i = i->next) {
+                        if (strcmp(i->rname, joinrname) == 0) {
+                            found = i;
+                            break;
+                        }
+                    }
+
+                    if (found) {
+                        /* Join room */
+                        printf(">>JOIN %d %d %s\n", uid, found->rid, found->rname);
+                        send_join(uid, found->rid, found->rname);
+
+                        rid = found->rid;
+                        rname = found->rname;
+                    } else {
+                        /* Create room */
+                        uint16_t new_rid = 1 + (rand() % 65534);
+
+                        printf(">>JOIN* %d %d %s\n", uid, new_rid, joinrname);
+                        send_join(uid, new_rid, joinrname);
+
+                        rid = new_rid;
+                        rname = joinrname;
+                    }
+                }
             }
         }
 
         usleep(1000);
     }
+
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &saved_tattr);
 
     return 0;
 }

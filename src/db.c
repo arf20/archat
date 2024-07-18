@@ -21,6 +21,7 @@
 #include "db.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 void
 user_list_push(user_node_t *l, uint32_t uid, const char *nick, uint16_t rid)
@@ -49,7 +50,8 @@ room_list_push(room_node_t *l, uint16_t rid, const char *rname)
 {
     for (room_node_t *i = l->next; i != NULL; i = i->next)
         if (i->rid == rid) {
-            i->rname = rname;
+            free(i->rname);
+            i->rname = strdup(rname);
             return;
         }
     
@@ -60,6 +62,6 @@ room_list_push(room_node_t *l, uint16_t rid, const char *rname)
     /* Create node */
     i->next = malloc(sizeof(room_node_t));
         i->next->rid = rid;
-    i->next->rname = rname;
+    i->next->rname = strdup(rname);
     i->next->next = NULL;
 }

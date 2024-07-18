@@ -31,7 +31,7 @@ typedef struct user_node_s {
 
 typedef struct room_node_s {
     uint16_t rid;
-    const char *rname;
+    char *rname;
     
     struct room_node_s *next;
 } room_node_t;

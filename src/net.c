@@ -137,7 +137,24 @@ send_pong(uint32_t uid, int16_t rid, const char *nick,
 int
 send_join(uint32_t uid, uint16_t rid, const char *rname)
 {
+    header_t *header = (header_t*)buff;
+    header->_magic = MAGIC;
+    header->type = TYPE_JOIN;
+    header->s_uid = uid;
 
+    char *data = buff + sizeof(header_t);
+    int datalen = 0;
+    
+    *(uint16_t*)data = rid;
+    datalen += 2;
+
+    datalen += 2; /* padd? */
+
+    strcpy(data + datalen, rname);
+    datalen += strlen(rname) + 1;
+
+    return sendto(fd, buff, sizeof(header_t) + datalen, 0,
+        (struct sockaddr*)&dest_addr, sizeof(struct sockaddr));
 }
 
 int

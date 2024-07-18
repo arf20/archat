@@ -31,6 +31,8 @@ Autodiscovery request. No data.
 ### PONG 0x02
 Autodiscovery reply.
 
+Discovers users and rooms. Provides uid, rid, nickname and room name.
+
 Data:
 ```
 +---------------+---------------+
@@ -44,7 +46,9 @@ Data:
 ```
 
 ### JOIN 0x03
-Room join
+Room join.
+
+Used to create rooms, join existing rooms and change room names.
 
 Data:
 ```
@@ -66,5 +70,10 @@ Data:
 | Message NUL-terminated        |
 | ...                           |
 ```
+
+## Fields
+
+- UID: User ID, 32-bit unsigned
+- RID: Room ID, 16-bit unsigned
 
 
