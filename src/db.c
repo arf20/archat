@@ -25,13 +25,14 @@
 
 void
 user_list_push(user_node_t *l, uint32_t uid, const char *nick, uint16_t rid,
-    struct sockaddr_in addr)
+    struct sockaddr_in addr, const char *hname)
 {
     for (user_node_t *i = l->next; i != NULL; i = i->next)
         if (i->uid == uid) {
             i->nick = nick;
             i->rid = rid;
             i->addr = addr;
+            i->hname = hname;
             return;
         }
     
@@ -45,6 +46,7 @@ user_list_push(user_node_t *l, uint32_t uid, const char *nick, uint16_t rid,
     i->next->nick = nick;
     i->next->rid = rid;
     i->next->addr = addr;
+    i->next->hname = hname;
     i->next->next = NULL;
 }
 

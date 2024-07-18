@@ -146,9 +146,10 @@ main(int argc, char **argv)
                 case TYPE_PING: {
                     if (debug) {
                         printf("<<PING %d\n", header->s_uid);
-                        printf(">>PONG %d %d %s %s\n", uid, rid, nick, rname);
+                        printf(">>PONG %d %d %s %s %s\n", uid, rid, nick,
+                            hname, rname);
                     }
-                    
+
                     send_pong(uid, rid, nick, hname, rname);
                 } break;
                 case TYPE_PONG: {
@@ -157,13 +158,14 @@ main(int argc, char **argv)
 
                     uint16_t s_rid = *(uint16_t*)data;
                     const char *s_nick = data + 4;
-                    const char *s_rname = data + 4 + strlen(s_nick) + 1;
-
+                    const char *s_hname = s_nick + strlen(s_nick) + 1;
+                    const char *s_rname = s_hname + strlen(s_hname) + 1;
+                    
                     if (debug)
-                        printf("%d %s %s\n", s_rid, s_nick, s_rname);
+                        printf("%d %s %s %s\n", s_rid, s_nick, s_hname, s_rname);
 
                     user_list_push(user_list, header->s_uid, strdup(s_nick),
-                        s_rid, s_addr);
+                        s_rid, s_addr, strdup(s_hname));
                     if (s_rid != 0)
                         room_list_push(room_list, s_rid, strdup(s_rname));
                 } break;
@@ -225,11 +227,12 @@ main(int argc, char **argv)
                     run = 0;
                 }; break;
                 case 'n': {
-                    printf("\n user name              from\n");
-                    printf(   "-----------------------------\n");
+                    printf("\n user-name@host-name               from\n");
+                    printf(  "----------------------------------------\n");
                     for (user_node_t *i = user_list->next; i != NULL; i = i->next)
-                        printf("%10s   %15s\n", i->nick, inet_ntoa(i->addr.sin_addr));
-                    puts(     "-----------------------------\n\n");
+                        printf("%10s@%-10s   %15s\n", i->nick, i->hname,
+                            inet_ntoa(i->addr.sin_addr));
+                    puts(    "----------------------------------------\n\n");
                 } break;
                 case 'w': {
                     int c = 0;

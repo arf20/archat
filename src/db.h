@@ -27,6 +27,7 @@ typedef struct user_node_s {
     const char *nick;
     uint16_t rid;
     struct sockaddr_in addr;
+    const char *hname;
 
     struct user_node_s *next;
 } user_node_t;
@@ -39,7 +40,7 @@ typedef struct room_node_s {
 } room_node_t;
 
 void user_list_push(user_node_t *l, uint32_t uid, const char *nick,
-    uint16_t rid, struct sockaddr_in addr);
+    uint16_t rid, struct sockaddr_in addr, const char *hname);
 void user_list_set_rid(user_node_t *l, uint32_t uid, uint16_t rid);
 const char *user_list_get_nick(user_node_t *l, uint32_t uid);
 uint16_t user_list_get_rid(user_node_t *l, uint32_t uid);
