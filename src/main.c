@@ -22,11 +22,14 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <time.h>
 
 #include <errno.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "net.h"
+#include "db.h"
 
 int
 main()
@@ -35,6 +38,8 @@ main()
         "This program comes with ABSOLUTELY NO WARRANTY\n"
         "This is free software, and you are welcome to redistribute it\n"
         "under certain conditions.\n\n");
+
+    srand(time(NULL));
 
     /* User information */
     uint32_t uid = rand();
@@ -46,11 +51,17 @@ main()
     uint16_t rid = 0;
     char *rname = NULL;
 
-    /*printf("Nickname [%s]> ", nick);
-    getline(&nickbuff, &nicklen, stdin);
-    nick[strlen(nick) - 1] = '\0';
+    /* DB */
+    user_node_t *user_list = malloc(sizeof(user_node_t));
+    user_list->next = NULL;
+    room_node_t *room_list = malloc(sizeof(room_node_t));
+    room_list->next = NULL;
 
-    if (strlen(nickbuff) > 0) nick = nickbuff;*/
+    printf("Nickname [%s]> ", nick);
+    getline(&nickbuff, &nicklen, stdin);
+    nickbuff[strlen(nickbuff) - 1] = '\0';
+
+    if (strlen(nickbuff) > 0) nick = nickbuff;
 
     /* Init */
     if (create_sockets() < 0) {
@@ -65,6 +76,9 @@ main()
         return 1;
     }
 
+    time_t t_begin = time(NULL);
+
+    fcntl(0, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK);
 
     while (1) {
         const header_t *header;
@@ -93,7 +107,32 @@ main()
 
                     printf("%d %s %s\n", s_rid, s_nick, s_rname);
 
+                    user_list_push(user_list, header->s_uid, strdup(s_nick), s_rid);
+                    room_list_push(room_list, s_rid, strdup(s_rname));
                 }
+            }
+        }
+
+        char cmd;
+        if (read(0, &cmd, 1) < 0) {
+            if (errno != EAGAIN) {
+                printf("read: %s\n", strerror(errno));
+                break;
+            }
+        } else  {
+            switch (cmd) {
+                case 'w': {
+                    for (user_node_t *i = user_list->next; i != NULL; i = i->next)
+                        printf("%s ", i->nick);
+                    puts("\n");
+                } break;
+                case 'l': {
+                    printf(" room name    #\n");
+                    printf("-------------------------------\n");
+                    for (room_node_t *i = room_list->next; i != NULL; i = i->next)
+                        printf("%s %d\n", i->rid);
+                    printf("-------------------------------\n");
+                } break;
             }
         }
 
