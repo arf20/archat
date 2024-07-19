@@ -22,6 +22,8 @@
 #include <stdint.h>
 
 #include <arpa/inet.h>
+#include <sys/types.h>
+#include <netinet/in.h>
 
 #define PORT    42069
 #define GROUP   "239.255.42.69"

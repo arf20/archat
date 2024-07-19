@@ -227,12 +227,13 @@ main(int argc, char **argv)
                     run = 0;
                 }; break;
                 case 'n': {
-                    printf("\n user-name@host-name               from\n");
-                    printf(  "----------------------------------------\n");
+                    printf("\n user-name@host-name               from      in-room\n");
+                    printf(  "-----------------------------------------------------\n");
                     for (user_node_t *i = user_list->next; i != NULL; i = i->next)
-                        printf("%10s@%-10s   %15s\n", i->nick, i->hname,
-                            inet_ntoa(i->addr.sin_addr));
-                    puts(    "----------------------------------------\n\n");
+                        printf("%10s@%-10s   %15s   %10s\n", i->nick, i->hname,
+                            inet_ntoa(i->addr.sin_addr),
+                            room_list_get_rname(room_list, i->rid));
+                    puts(    "-----------------------------------------------------\n\n");
                 } break;
                 case 'w': {
                     int c = 0;
@@ -306,6 +307,12 @@ main(int argc, char **argv)
                         printf(">>RMSG %d %d %s\n", uid, rid, msg);
                     send_rmsg(uid, rid, msg);
 
+                } break;
+                case 'h': {
+                    printf("\n  l - list open rooms\n  w - who is in the room\n"
+                        "  j - join a room\n  n - discovered users\n"
+                        "  q - quit arfchat\n"
+                        "\nTo begin TALK MODE, press [SPACE]\n\n");
                 } break;
             }
         }

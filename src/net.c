@@ -44,7 +44,7 @@ create_sockets()
 
     /* Allow multiple sockets to use the same port on the same interface */
     unsigned int yes = 1;
-    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*) &yes, sizeof(yes)) < 0)
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) < 0)
        return -1;
 
     /* Bind address */
@@ -75,6 +75,8 @@ create_sockets()
     dest_addr.sin_family = AF_INET;
     dest_addr.sin_addr.s_addr = inet_addr(GROUP);
     dest_addr.sin_port = htons(PORT);
+
+    return 0;
 }
 
 int

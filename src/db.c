@@ -66,6 +66,7 @@ user_list_get_nick(user_node_t *l, uint32_t uid)
     for (user_node_t *i = l->next; i != NULL; i = i->next)
         if (i->uid == uid)
             return i->nick;
+    return NULL;
 }
 
 uint16_t
@@ -74,6 +75,7 @@ user_list_get_rid(user_node_t *l, uint32_t uid)
     for (user_node_t *i = l->next; i != NULL; i = i->next)
         if (i->uid == uid)
             return i->rid;
+    return 0;
 }
 
 void
@@ -95,4 +97,12 @@ room_list_push(room_node_t *l, uint16_t rid, const char *rname)
         i->next->rid = rid;
     i->next->rname = strdup(rname);
     i->next->next = NULL;
+}
+
+const char *
+room_list_get_rname(room_node_t *l, uint16_t rid)
+{
+    for (room_node_t *i = l->next; i != NULL; i = i->next)
+        if (i->rid == rid)
+            return i->rname;
 }

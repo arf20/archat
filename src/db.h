@@ -21,6 +21,8 @@
 
 #include <stdint.h>
 #include <arpa/inet.h>
+#include <sys/types.h>
+#include <netinet/in.h>
 
 typedef struct user_node_s {
     uint32_t uid;
@@ -46,5 +48,6 @@ const char *user_list_get_nick(user_node_t *l, uint32_t uid);
 uint16_t user_list_get_rid(user_node_t *l, uint32_t uid);
 
 void room_list_push(room_node_t *l, uint16_t rid, const char *rname);
+const char *room_list_get_rname(room_node_t *l, uint16_t rid);
 
 #endif /* _DB_H */
