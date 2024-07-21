@@ -16,38 +16,45 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#ifndef _DB_H
-#define _DB_H
+#ifndef _NET_H
+#define _NET_H
 
 #include <stdint.h>
+
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <netinet/in.h>
 
-typedef struct user_node_s {
-    uint32_t uid;
-    const char *nick;
-    uint16_t rid;
-    struct sockaddr_in addr;
-    const char *hname;
+#define PORT    42069
+#define GROUP   "239.255.42.69"
 
-    struct user_node_s *next;
-} user_node_t;
+#define MAGIC   0x42069cac
 
-typedef struct room_node_s {
-    uint16_t rid;
-    char *rname;
-    
-    struct room_node_s *next;
-} room_node_t;
+typedef enum {
+    TYPE_NOP,
+    TYPE_PING,
+    TYPE_PONG,
+    TYPE_JOIN,
+    TYPE_RMSG
+} type_t;
 
-void user_list_push(user_node_t *l, uint32_t uid, const char *nick,
-    uint16_t rid, struct sockaddr_in addr, const char *hname);
-void user_list_set_rid(user_node_t *l, uint32_t uid, uint16_t rid);
-const char *user_list_get_nick(user_node_t *l, uint32_t uid);
-uint16_t user_list_get_rid(user_node_t *l, uint32_t uid);
+typedef struct {
+    uint32_t _magic;
+    type_t type;
+    uint8_t flags;
+    uint16_t len;
+    uint32_t s_uid;
+} header_t;
 
-void room_list_push(room_node_t *l, uint16_t rid, const char *rname);
-const char *room_list_get_rname(room_node_t *l, uint16_t rid);
+int create_sockets();
+void destroy_sockets();
+int recv_message(const header_t **header, const char **data, struct sockaddr_in *addr);
+int send_ping(uint32_t uid);
+int send_pong(uint32_t uid, int16_t rid, const char *nick, const char *hname,
+    const char *rname);
+int send_join(uint32_t uid, uint16_t rid, const char *rname);
+int send_rmsg(uint32_t uid, uint16_t rid, const char *msg);
 
-#endif /* _DB_H */
+
+#endif /* _NET_H */
+

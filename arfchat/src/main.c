@@ -83,7 +83,7 @@ main(int argc, char **argv)
 
     /* Room information */
     uint16_t rid = 0;
-    const char *rname = NULL;
+    char *rname = NULL;
 
     /* DB */
     user_node_t *user_list = malloc(sizeof(user_node_t));
@@ -134,7 +134,6 @@ main(int argc, char **argv)
     const char *data;
     struct sockaddr_in s_addr;
     while (run) {
-        
         if (recv_message(&header, &data, &s_addr) < 0) {
             if (errno != EAGAIN) {
                 printf("recv_message: %s\n", strerror(errno));
@@ -164,10 +163,10 @@ main(int argc, char **argv)
                     if (debug)
                         printf("%d %s %s %s\n", s_rid, s_nick, s_hname, s_rname);
 
-                    user_list_push(user_list, header->s_uid, strdup(s_nick),
-                        s_rid, s_addr, strdup(s_hname));
+                    user_list_push(user_list, header->s_uid, s_nick,
+                        s_rid, s_addr, s_hname);
                     if (s_rid != 0)
-                        room_list_push(room_list, s_rid, strdup(s_rname));
+                        room_list_push(room_list, s_rid, s_rname);
                 } break;
                 case TYPE_JOIN: {
                     if (debug)
@@ -321,6 +320,30 @@ main(int argc, char **argv)
     }
 
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &saved_tattr);
+
+
+    /* Deinit */
+    destroy_sockets();
+
+    for (user_node_t *i = user_list->next; i != NULL;) {
+        user_node_t *t = i->next;
+        free(i->nick);
+        free(i->hname);
+        free(i);
+        i = t;
+    }
+    free(user_list);
+
+    for (room_node_t *i = room_list->next; i != NULL;) {
+        room_node_t *t = i->next;
+        free(i->rname);
+        free(i);
+        i = t;
+    }
+    free(room_list);
+
+    free(nickbuff);
+    free(rname);
 
     return 0;
 }

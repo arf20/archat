@@ -47,6 +47,7 @@ typedef struct {
 } header_t;
 
 int create_sockets();
+void destroy_sockets();
 int recv_message(const header_t **header, const char **data, struct sockaddr_in *addr);
 int send_ping(uint32_t uid);
 int send_pong(uint32_t uid, int16_t rid, const char *nick, const char *hname,

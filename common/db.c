@@ -29,10 +29,12 @@ user_list_push(user_node_t *l, uint32_t uid, const char *nick, uint16_t rid,
 {
     for (user_node_t *i = l->next; i != NULL; i = i->next)
         if (i->uid == uid) {
-            i->nick = nick;
+            free(i->nick);
+            i->nick = strdup(nick);
             i->rid = rid;
             i->addr = addr;
-            i->hname = hname;
+            free(i->hname);
+            i->hname = strdup(hname);
             return;
         }
     
@@ -43,10 +45,10 @@ user_list_push(user_node_t *l, uint32_t uid, const char *nick, uint16_t rid,
     /* Create node */
     i->next = malloc(sizeof(user_node_t));
     i->next->uid = uid;
-    i->next->nick = nick;
+    i->next->nick = strdup(nick);
     i->next->rid = rid;
     i->next->addr = addr;
-    i->next->hname = hname;
+    i->next->hname = strdup(hname);
     i->next->next = NULL;
 }
 
@@ -105,4 +107,5 @@ room_list_get_rname(room_node_t *l, uint16_t rid)
     for (room_node_t *i = l->next; i != NULL; i = i->next)
         if (i->rid == rid)
             return i->rname;
+    return NULL;
 }
