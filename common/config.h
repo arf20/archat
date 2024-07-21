@@ -16,36 +16,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#ifndef _NET_H
-#define _NET_H
+#ifndef _CONFIG_H
+#define _CONFIG_H
 
-#include "config.h"
+#define PORT    42069
+#define GROUP   "239.255.42.69"
 
-#include <stdint.h>
+#define MAGIC   0x42069cac
 
-#include <arpa/inet.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-
-typedef enum {
-    TYPE_NOP,
-    TYPE_PING,
-    TYPE_PONG,
-    TYPE_JOIN,
-    TYPE_RMSG
-} type_t;
-
-typedef struct {
-    uint32_t _magic;
-    type_t type;
-    uint8_t flags;
-    uint16_t len;
-    uint32_t s_uid;
-} header_t;
-
-int create_sockets();
-void destroy_sockets();
-int recv_message(const header_t **header, const char **data, struct sockaddr_in *addr);
-int relay_packet(void *buff, size_t size, struct sockaddr_in *addr);
-
-#endif /* _NET_H */
+#endif /* _CONFIG_H */

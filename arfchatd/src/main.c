@@ -87,8 +87,9 @@ main(int argc, char **argv)
     const header_t *header;
     const char *data;
     struct sockaddr_in s_addr;
+    int size = 0;
     while (run) {
-        if (recv_message(&header, &data, &s_addr) < 0) {
+        if ((size = recv_message(&header, &data, &s_addr)) < 0) {
             if (errno != EAGAIN) {
                 printf("recv_message: %s\n", strerror(errno));
                 break;
@@ -159,7 +160,8 @@ main(int argc, char **argv)
             }
 
             /* Relay packet */
-            
+            for (user_node_t *i = user_list->next; i != NULL; i = i->next)
+                relay_packet(header, size, &i->addr);
         }
     }
 

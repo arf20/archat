@@ -101,6 +101,6 @@ recv_message(const header_t **header, const char **data, struct sockaddr_in *add
 int
 relay_packet(void *buff, size_t size, struct sockaddr_in *addr)
 {
-    
+    return sendto(fd, buff, size, 0, addr, sizeof(struct sockaddr_in));
 }
 

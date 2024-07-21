@@ -19,16 +19,13 @@
 #ifndef _NET_H
 #define _NET_H
 
+#include "config.h"
+
 #include <stdint.h>
 
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <netinet/in.h>
-
-#define PORT    42069
-#define GROUP   "239.255.42.69"
-
-#define MAGIC   0x42069cac
 
 typedef enum {
     TYPE_NOP,
@@ -55,6 +52,4 @@ int send_pong(uint32_t uid, int16_t rid, const char *nick, const char *hname,
 int send_join(uint32_t uid, uint16_t rid, const char *rname);
 int send_rmsg(uint32_t uid, uint16_t rid, const char *msg);
 
-
 #endif /* _NET_H */
-
