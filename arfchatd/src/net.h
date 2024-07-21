@@ -46,6 +46,6 @@ typedef struct {
 int create_sockets();
 void destroy_sockets();
 int recv_message(const header_t **header, const char **data, struct sockaddr_in *addr);
-int relay_packet(void *buff, size_t size, struct sockaddr_in *addr);
+int relay_packet(const void *buff, size_t size, struct sockaddr_in *addr);
 
 #endif /* _NET_H */
