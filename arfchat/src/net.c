@@ -32,9 +32,9 @@
 #include <unistd.h>
 
 #ifdef __linux__
-#define COMPAT_REUSE    SO_REUSEADDR
-#elif  BSD
-#define COMPAT_REUSE    SO_REUSEPORT
+    #define COMPAT_REUSE    SO_REUSEADDR
+#elif  __UNIX__
+    #define COMPAT_REUSE    SO_REUSEPORT
 #endif
 
 static int fd = 0;
