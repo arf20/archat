@@ -64,6 +64,15 @@ create_sockets()
     if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) < 0)
         return -1;
 
+    struct ip_mreq mreq;
+    mreq.imr_multiaddr.s_addr = inet_addr(GROUP);
+    mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+    if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*) &mreq,
+        sizeof(mreq)) < 0)
+    {
+        return -1;
+    }
+
     /* Set non-blocking with fcntl for cross-compatibility */
     if (fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK) < 0)
         return -1;
