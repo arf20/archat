@@ -31,6 +31,12 @@
 #include <errno.h>
 #include <unistd.h>
 
+#ifdef __linux__
+#define COMPAT_REUSE    SO_REUSEADDR
+#elif  BSD
+#define COMPAT_REUSE    SO_REUSEPORT
+#endif
+
 static int fd = 0;
 static char buff[2048];
 
@@ -45,7 +51,7 @@ create_sockets()
 
     /* Allow multiple sockets to use the same port on the same interface */
     unsigned int yes = 1;
-    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) < 0)
+    if (setsockopt(fd, SOL_SOCKET, COMPAT_REUSE, &yes, sizeof(yes)) < 0)
        return -1;
 
     /* Bind address */
