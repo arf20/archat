@@ -33,7 +33,7 @@
 
 #ifdef __linux__
     #define COMPAT_REUSE    SO_REUSEADDR
-#elif  __UNIX__
+#elif  __unix__
     #define COMPAT_REUSE    SO_REUSEPORT
 #endif
 
