@@ -134,7 +134,13 @@ main(int argc, char **argv)
                     
                     if (prev_rid != s_rid)
                         printf("%s has left %s\n", user_list_get_nick(user_list,
-                            header->s_uid), prev_rid);
+                            header->s_uid), room_list_get_rname(room_list,
+                            prev_rid));
+
+                    if (s_rid == 0) {
+                        
+                        break;
+                    }
 
                     user_list_set_rid(user_list, header->s_uid, s_rid);
                     room_list_push(room_list, s_rid, s_rname);
