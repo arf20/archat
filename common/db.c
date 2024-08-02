@@ -81,6 +81,20 @@ user_list_get_rid(user_node_t *l, uint32_t uid)
 }
 
 void
+user_list_remove(user_node_t *l, uint32_t uid) 
+{
+    for (user_node_t *i = l->next; i->next != NULL; i = i->next) {
+        if (i->next->uid == uid) {
+            user_node_t *t = i->next;
+            i->next = i->next->next;
+            free(t->hname);
+            free(t->nick);
+            free(t);
+        }
+    }
+}
+
+void
 room_list_push(room_node_t *l, uint16_t rid, const char *rname)
 {
     for (room_node_t *i = l->next; i != NULL; i = i->next)
@@ -108,4 +122,22 @@ room_list_get_rname(room_node_t *l, uint16_t rid)
         if (i->rid == rid)
             return i->rname;
     return NULL;
+}
+
+void
+room_list_clean_empty(room_node_t *rl, user_node_t *ul)
+{
+    for (room_node_t *i = rl->next; i->next != NULL; i = i->next) {
+        int found = 0;
+        for (user_node_t *j = ul->next; j != NULL; j = j->next)
+            if (j->rid == i->next->rid)
+                found = 1;
+
+        if (!found) {
+            room_node_t *t = i->next;
+            i->next = i->next->next;
+            free(t->rname);
+            free(t);
+        }
+    }
 }

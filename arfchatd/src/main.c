@@ -138,7 +138,8 @@ main(int argc, char **argv)
                             prev_rid));
 
                     if (s_rid == 0) {
-                        
+                        user_list_remove(user_list, header->s_uid);
+                        room_list_clean_empty(room_list, user_list);
                         break;
                     }
 
