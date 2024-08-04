@@ -43,7 +43,7 @@ typedef struct {
     uint32_t s_uid;
 } header_t;
 
-int create_sockets();
+int create_sockets(const char *relay_server);
 void destroy_sockets();
 int recv_message(const header_t **header, const char **data, struct sockaddr_in *addr);
 int send_ping(uint32_t uid);

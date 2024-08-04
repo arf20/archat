@@ -56,6 +56,12 @@ prompt_input(char *buff, size_t n)
     putchar('\n');
 }
 
+void
+usage(const char *self)
+{
+    printf("%s: [-d] [server]\n\n\t-d\tDebug\n\trelay\tinternet relay server\n");
+}
+
 int
 main(int argc, char **argv)
 {
@@ -66,10 +72,19 @@ main(int argc, char **argv)
 
     srand(time(NULL));
 
+    if (argc > 3) {
+        usage(argv[0]);
+        return 1;
+    }
+
     int debug = 0;
-    for (int i = 1; i < argc; i++)
+    char *relay_server = NULL;
+    for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-d") == 0)
             debug = 1;
+        else
+            relay_server = argv[i]; 
+    }
 
     /* Enviroment information */
     char hname[1024];
@@ -101,7 +116,7 @@ main(int argc, char **argv)
         printf("==uid: %d\n==nick: %s\n", uid, nick);
 
     /* Init */
-    if (create_sockets() < 0) {
+    if (create_sockets(relay_server) < 0) {
         printf("create_sockets: %s\n", strerror(errno));
         return 1;
     }

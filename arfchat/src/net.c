@@ -41,9 +41,10 @@ static int fd = 0;
 static char buff[2048];
 
 static struct sockaddr_in dest_addr;
+static struct sockaddr_in relay_addr;
 
 int
-create_sockets()
+create_sockets(const char *relay_server)
 {
     /* Create socket */
     fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -56,7 +57,7 @@ create_sockets()
 
     /* Bind address */
     struct sockaddr_in addr;
-    memset(&dest_addr, 0, sizeof(addr));
+    memset(&addr, 0, sizeof(struct sockaddr_in));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
     addr.sin_port = htons(PORT);
@@ -77,11 +78,19 @@ create_sockets()
     if (fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK) < 0)
         return -1;
 
-    /* Set destination address */
-    memset(&dest_addr, 0, sizeof(addr));
+    /* Set multicast destination address */
+    memset(&dest_addr, 0, sizeof(struct sockaddr_in));
     dest_addr.sin_family = AF_INET;
     dest_addr.sin_addr.s_addr = inet_addr(GROUP);
     dest_addr.sin_port = htons(PORT);
+
+    /* Set relay destination address if any */
+    memset(&relay_addr, 0, sizeof(struct sockaddr_in));
+    if (relay_server) {
+        relay_addr.sin_family = AF_INET;
+        relay_addr.sin_addr.s_addr = inet_addr(relay_server);
+        relay_addr.sin_port = htons(PORT);
+    }
 
     return 0;
 }
@@ -112,8 +121,12 @@ send_ping(uint32_t uid)
     header.type = TYPE_PING;
     header.s_uid = uid;
 
-    return sendto(fd, &header, sizeof(header), 0, (struct sockaddr*)&dest_addr,
-        sizeof(struct sockaddr));
+    int r = sendto(fd, &header, sizeof(header), 0, (struct sockaddr*)&dest_addr,
+            sizeof(struct sockaddr));
+    if (r != 0 && relay_addr.sin_family != 0)
+        r = sendto(fd, &header, sizeof(header), 0, (struct sockaddr*)&relay_addr,
+            sizeof(struct sockaddr));
+    return r;
 }
 
 int
@@ -147,8 +160,12 @@ send_pong(uint32_t uid, int16_t rid, const char *nick,
         datalen++;
     }
 
-    return sendto(fd, buff, sizeof(header_t) + datalen, 0,
-        (struct sockaddr*)&dest_addr, sizeof(struct sockaddr));
+    int r = sendto(fd, buff, sizeof(header_t) + datalen, 0,
+            (struct sockaddr*)&dest_addr, sizeof(struct sockaddr));
+    if (r != 0 && relay_addr.sin_family != 0)
+        r = sendto(fd, buff, sizeof(header_t) + datalen, 0,
+            (struct sockaddr*)&relay_addr, sizeof(struct sockaddr));
+    return r;
 }
 
 int
@@ -170,8 +187,13 @@ send_join(uint32_t uid, uint16_t rid, const char *rname)
     strcpy(data + datalen, rname);
     datalen += strlen(rname) + 1;
 
-    return sendto(fd, buff, sizeof(header_t) + datalen, 0,
-        (struct sockaddr*)&dest_addr, sizeof(struct sockaddr));
+    int r = sendto(fd, buff, sizeof(header_t) + datalen, 0,
+            (struct sockaddr*)&dest_addr, sizeof(struct sockaddr));
+    if (r != 0 && relay_addr.sin_family != 0)
+        r = sendto(fd, buff, sizeof(header_t) + datalen, 0,
+            (struct sockaddr*)&relay_addr, sizeof(struct sockaddr));
+    return r;
+
 }
 
 int
@@ -193,6 +215,10 @@ send_rmsg(uint32_t uid, uint16_t rid, const char *msg)
     strcpy(data + datalen, msg);
     datalen += strlen(msg) + 1;
 
-    return sendto(fd, buff, sizeof(header_t) + datalen, 0,
+    int r = sendto(fd, buff, sizeof(header_t) + datalen, 0,
         (struct sockaddr*)&dest_addr, sizeof(struct sockaddr));
+    if (r != 0 && relay_addr.sin_family != 0)
+        r = sendto(fd, buff, sizeof(header_t) + datalen, 0,
+            (struct sockaddr*)&relay_addr, sizeof(struct sockaddr));
+    return r;
 }
