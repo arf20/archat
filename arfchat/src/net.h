@@ -37,7 +37,7 @@ typedef enum {
 
 typedef struct {
     uint32_t _magic;
-    type_t type;
+    uint8_t type;
     uint8_t flags;
     uint16_t len;
     uint32_t s_uid;

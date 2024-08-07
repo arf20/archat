@@ -100,6 +100,8 @@ main(int argc, char **argv)
     uint16_t rid = 0;
     char *rname = NULL;
 
+    printf("%d\n", sizeof(header_t));
+
     /* DB */
     user_node_t *user_list = malloc(sizeof(user_node_t));
     user_list->next = NULL;
