@@ -41,11 +41,30 @@ function acp_proto.dissector(buffer,pinfo,tree)
     elseif type_num == 2 then 
         subtree:add_le(acp_rid, buffer(12,2))
 
-        local string_length = get_str_len(buffer, 16)
-        subtree:add_le(acp_nick, buffer(16,string_length))
+        local nick_length = get_str_len(buffer, 16)
+        subtree:add_le(acp_nick, buffer(16,nick_length))
 
-    elseif type_num == 3 then type_name = "JOIN"
-    elseif type_num == 4 then type_name = "RMSG" end
+        local host_off = 16 + nick_length + 1
+        local host_len = get_str_len(buffer, host_off)
+        subtree:add_le(acp_host, buffer(host_off,host_len))
+
+        local rname_off = host_off + host_len + 1
+        local rname_len = get_str_len(buffer, rname_off)
+        subtree:add_le(acp_rname, buffer(rname_off,rname_len))
+
+    elseif type_num == 3 then
+        subtree:add_le(acp_rid, buffer(12,2))
+
+        local rname_length = get_str_len(buffer, 16)
+        subtree:add_le(acp_rname, buffer(16,rname_length))
+
+    elseif type_num == 4 then 
+        subtree:add_le(acp_rid, buffer(12,2))
+
+        local rmsg_length = get_str_len(buffer, 16)
+        subtree:add_le(acp_rmsg, buffer(16,rmsg_length))
+
+    end
 
 end
 
@@ -53,7 +72,7 @@ function get_str_len(buffer, off)
     local string_length
     for i = off, length - 1, 1 do
       if (buffer(i,1):le_uint() == 0) then
-        string_length = i - 20
+        string_length = i - off
         break
       end
     end

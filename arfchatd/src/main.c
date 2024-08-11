@@ -95,16 +95,19 @@ main(int argc, char **argv)
                 break;
             }
         } else {
+            if (debug)
+                printf("<<[%s] ", inet_ntoa(s_addr.sin_addr));
+
             /* Handle incoming packets */
             switch (header->type) {
                 case TYPE_PING: {
                     if (debug)
-                        printf("<<PING %d\n", header->s_uid);
+                        printf("PING %d\n", header->s_uid);
                     
                 } break;
                 case TYPE_PONG: {
                     if (debug)
-                        printf("<<PONG %d ", header->s_uid);
+                        printf("PONG %d ", header->s_uid);
 
                     uint16_t s_rid = *(uint16_t*)data;
                     const char *s_nick = data + 4;
@@ -121,7 +124,7 @@ main(int argc, char **argv)
                 } break;
                 case TYPE_JOIN: {
                     if (debug)
-                        printf("<<JOIN %d ", header->s_uid);
+                        printf("JOIN %d ", header->s_uid);
 
                     uint16_t s_rid = *(uint16_t*)data;
                     const char *s_rname = data + 4;
@@ -151,7 +154,7 @@ main(int argc, char **argv)
                 } break;
                 case TYPE_RMSG: {
                     if (debug)
-                        printf("<<RMSG %d ", header->s_uid);
+                        printf("RMSG %d ", header->s_uid);
 
                     uint16_t s_rid = *(uint16_t*)data;
                     const char *s_msg = data + 4;

@@ -90,6 +90,7 @@ user_list_remove(user_node_t *l, uint32_t uid)
             free(t->hname);
             free(t->nick);
             free(t);
+            return;
         }
     }
 }
